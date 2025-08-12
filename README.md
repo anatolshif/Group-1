@@ -1,23 +1,32 @@
 # Group-1
-## Vulnerability Scanner
-This project is a basic command-line tool for scanning for known vulnerabilities using the National Vulnerability Database (NVD) feeds. The scanner is designed to help automate the process of checking software and systems for security weaknesses.
+## Android app Security Scanner
+This project is a command-line tool for scanning for known mobile app security flaws and risks. The scanner is designed to help automate the process of checking apps and systems for security weaknesses.
 
 ## Core Functionality
 The scanner's primary function is to:
 
-Fetch and parse the latest NVD feeds, which contain detailed information on Common Vulnerabilities and Exposures (CVEs).
+Scan the provided mobile app for issues, starting from the OWASP top 10 for mobile.
+
+Provide an easier way to reverse and scan flutter apps, which are otherwise a burden for security testers.
+
+Provide frida scripts for repetitive tasks such as ssl pinning bypass, tracing fragments and activities,emulator checking bypass,implementation overwrite and so on.
+
+Automated fetching of databases and shared preferences.
+
+Automated fetch of exposed app components.
+
+Generate scan report in easy to understand PDF format.
 
 Provide a mechanism to cross-reference software or system information against this database to identify potential vulnerabilities.
 
-Automate vulnerability checks, reducing the need for manual lookups and saving time in the security assessment process.
+Automate vulnerability checks for multiple apps, reducing the need for manual lookups and saving time in the security assessment process.
 
-Best Practice
-For the most accurate results, it is critical to keep the NVD feed data up-to-date. The tool is designed with a workflow that encourages a daily update of the vulnerability database.
+
 
 ## Prerequisites
 To run this tool, you will need:
 
 Python: This project is built entirely in Python.
 
-NVD Feeds: Access to the official NVD feeds, which provide the raw data on CVEs.
+A basic understanding of Android app development.
 
