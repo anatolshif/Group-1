@@ -1,6 +1,4 @@
-# Group-1
-## Android app Security Scanner
-This project is a command-line tool for scanning for known mobile app security flaws and risks. The scanner is designed to help automate the process of checking apps and systems for security weaknesses.
+
 
 ## Core Functionality
 The scanner's primary function is to:
