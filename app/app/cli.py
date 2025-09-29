@@ -15,11 +15,6 @@ def _import_attr(module, name):
     except Exception:
         return None
 
-# Try common function names in existing files
-group_scan = _import_attr('group1proj', 'run_scan') or _import_attr('group1proj', 'main') or _import_attr('group1proj', 'scan')
-alt_scan   = _import_attr('alt_group1proj', 'run_scan') or _import_attr('alt_group1proj', 'main')
-find_exported = _import_attr('find_exported', 'find_exported') or _import_attr('find_exported', 'main') or _import_attr('find_exported', 'get_exported')
-generate_pdf = _import_attr('generate_scan_report', 'generate_report') or _import_attr('generate_scan_report', 'generate_pdf') or _import_attr('generate_scan_report', 'main')
 
 def fallback_static(apk):
     if not apk:
