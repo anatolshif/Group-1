@@ -1,13 +1,14 @@
-# universal_log_capture_fixed.py - Works with ANY Android device
+# universal_log_capture_final.py 
 import subprocess
 import time
 import os
+import re
 from datetime import datetime
 
-# Your specific ADB path that we know works
+# Your ADB path
 ADB_PATH = r"C:\Users\micha\Downloads\platform-tools-latest-windows\platform-tools\adb.exe"
 
-class UniversalLogCapture:
+class LogCapture:
     def __init__(self):
         self.adb_path = ADB_PATH
         self.device_id = None
@@ -16,7 +17,6 @@ class UniversalLogCapture:
         # Verify ADB exists
         if not os.path.exists(self.adb_path):
             print(f"❌ ADB not found at: {self.adb_path}")
-            print("Please check the ADB path and try again.")
             exit()
         else:
             print(f"✅ ADB found: {self.adb_path}")
@@ -24,156 +24,224 @@ class UniversalLogCapture:
     def get_all_devices(self):
         """Get all connected Android devices"""
         try:
-            result = subprocess.run(
-                [self.adb_path, "devices"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
+            result = subprocess.run([self.adb_path, "devices"], capture_output=True, text=True)
             devices = []
             for line in result.stdout.split('\n')[1:]:
                 if line.strip() and '\tdevice' in line:
-                    device_id = line.split('\t')[0]
-                    devices.append(device_id)
-            
+                    devices.append(line.split('\t')[0])
             return devices
-        except Exception as e:
-            print(f"❌ Error getting devices: {e}")
+        except:
             return []
     
     def select_device(self):
         """Let user select which device to use"""
         devices = self.get_all_devices()
-        
         if not devices:
             print("❌ No Android devices connected!")
-            print("\nPlease connect an Android device and:")
-            print("1. Enable USB Debugging in Developer Options")
-            print("2. Allow USB debugging when prompted")
             return False
-        
-        print(f"\n📱 Found {len(devices)} device(s):")
-        for i, device_id in enumerate(devices, 1):
-            info = self.get_device_info(device_id)
-            print(f"   {i}. {info.get('model', 'Unknown')} ({device_id})")
         
         if len(devices) == 1:
             self.device_id = devices[0]
-            print(f"✅ Auto-selected: {self.device_id}")
+            return True
         else:
+            print(f"📱 Found {len(devices)} devices:")
+            for i, device in enumerate(devices, 1):
+                print(f"   {i}. {device}")
             try:
-                choice = int(input(f"\nSelect device (1-{len(devices)}): "))
-                if 1 <= choice <= len(devices):
-                    self.device_id = devices[choice-1]
-                else:
-                    print("❌ Invalid selection")
-                    return False
-            except ValueError:
-                print("❌ Invalid input")
+                choice = int(input(f"Select device (1-{len(devices)}): "))
+                self.device_id = devices[choice-1]
+                return True
+            except:
                 return False
-        
-        # Get device info for selected device
-        self.device_info = self.get_device_info(self.device_id)
-        return True
     
-    def get_device_info(self, device_id):
-        """Get detailed information about a device"""
-        info = {
-            'id': device_id,
-            'model': 'Unknown',
-            'android_version': 'Unknown',
-            'manufacturer': 'Unknown',
-            'brand': 'Unknown',
-            'device': 'Unknown'
-        }
+    def get_device_info(self):
+        """Get device information"""
+        if not self.device_id:
+            return {}
         
+        info = {}
         commands = {
-            'model': ["-s", device_id, "shell", "getprop", "ro.product.model"],
-            'android_version': ["-s", device_id, "shell", "getprop", "ro.build.version.release"],
-            'manufacturer': ["-s", device_id, "shell", "getprop", "ro.product.manufacturer"],
-            'brand': ["-s", device_id, "shell", "getprop", "ro.product.brand"],
-            'device': ["-s", device_id, "shell", "getprop", "ro.product.device"],
+            'model': ["shell", "getprop", "ro.product.model"],
+            'android_version': ["shell", "getprop", "ro.build.version.release"],
         }
         
         for key, command in commands.items():
             try:
-                result = subprocess.run(
-                    [self.adb_path] + command,
-                    capture_output=True,
-                    text=True,
-                    timeout=5
-                )
-                if result.returncode == 0 and result.stdout.strip():
+                result = subprocess.run([self.adb_path, "-s", self.device_id] + command, 
+                                      capture_output=True, text=True)
+                if result.returncode == 0:
                     info[key] = result.stdout.strip()
             except:
-                pass
+                info[key] = "Unknown"
         
         return info
     
-    def display_device_info(self):
-        """Display information about the current device"""
-        if not self.device_info:
-            return
-        
-        print(f"\n📋 Device Information:")
-        print(f"   Model: {self.device_info.get('model', 'Unknown')}")
-        print(f"   Android: {self.device_info.get('android_version', 'Unknown')}")
-        print(f"   Manufacturer: {self.device_info.get('manufacturer', 'Unknown')}")
-        print(f"   Brand: {self.device_info.get('brand', 'Unknown')}")
-        print(f"   Device ID: {self.device_id}")
-    
-    def capture_logs_basic(self, duration=60, output_file=None):
-        """Basic log capture for any device"""
+    def get_installed_apps(self, count=30):
+        """Get list of installed apps"""
         if not self.device_id:
             if not self.select_device():
-                return None
+                return []
         
-        model = self.device_info.get('model', 'AndroidDevice')
+        try:
+            result = subprocess.run([self.adb_path, "-s", self.device_id, "shell", "pm", "list", "packages"],
+                                  capture_output=True, text=True, timeout=15)
+            
+            packages = []
+            for line in result.stdout.split('\n'):
+                if line.startswith('package:'):
+                    packages.append(line.replace('package:', '').strip())
+            
+            # Get app labels
+            apps_with_labels = []
+            print("📦 Getting app information...")
+            
+            for i, package in enumerate(packages[:count]):
+                label_result = subprocess.run([self.adb_path, "-s", self.device_id, "shell", "pm", "dump", package],
+                                            capture_output=True, text=True, timeout=5)
+                
+                app_label = package
+                if label_result.returncode == 0:
+                    for dump_line in label_result.stdout.split('\n'):
+                        if "label=" in dump_line.lower():
+                            match = re.search(r'label=(.+)', dump_line, re.IGNORECASE)
+                            if match:
+                                app_label = f"{match.group(1).strip()} ({package})"
+                                break
+                
+                apps_with_labels.append((package, app_label))
+                print(f"   🔍 {i+1}/{min(len(packages), count)}", end='\r')
+            
+            print(f"\n✅ Found {len(packages)} apps")
+            return apps_with_labels
+            
+        except:
+            return []
+    
+    def search_apps(self, search_term):
+        """Search for apps by name or package"""
+        all_apps = self.get_installed_apps(100)
+        matching_apps = []
+        search_lower = search_term.lower()
         
-        if not output_file:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            safe_name = "".join(c for c in model if c.isalnum() or c in ('-', '_', ' '))
-            output_file = f"logs_{safe_name}_{timestamp}.txt"
+        for package, label in all_apps:
+            if search_lower in package.lower() or search_lower in label.lower():
+                matching_apps.append((package, label))
         
-        print(f"\n🎯 Starting Basic Log Capture")
+        return matching_apps
+    
+    def capture_app_logs(self, package_name, duration=60):
+        """Capture logs for specific app"""
+        if not self.device_id:
+            if not self.select_device():
+                return
+        
+        device_info = self.get_device_info()
+        model = device_info.get('model', 'AndroidDevice')
+        
+        # Get app label
+        app_label = package_name
+        label_result = subprocess.run([self.adb_path, "-s", self.device_id, "shell", "pm", "dump", package_name],
+                                    capture_output=True, text=True)
+        if label_result.returncode == 0:
+            for line in label_result.stdout.split('\n'):
+                if "label=" in line.lower():
+                    match = re.search(r'label=(.+)', line, re.IGNORECASE)
+                    if match:
+                        app_label = match.group(1).strip()
+                        break
+        
+        # Ask for filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = "".join(c for c in app_label if c.isalnum() or c in ('-', '_', ' '))[:30]
+        default_filename = f"app_logs_{safe_name}_{timestamp}.txt"
+        
+        filename = input(f"Output filename [{default_filename}]: ").strip()
+        if not filename:
+            filename = default_filename
+        
+        print(f"\n🎯 Starting App Log Capture")
+        print(f"   App: {app_label}")
+        print(f"   Package: {package_name}")
         print(f"   Device: {model}")
         print(f"   Duration: {duration} seconds")
-        print(f"   Output: {output_file}")
+        print(f"   Output: {filename}")
         print("-" * 50)
         
         try:
-            # Clear logs
             subprocess.run([self.adb_path, "-s", self.device_id, "logcat", "-c"])
             print("✅ Log buffer cleared")
             
-            # Start capture
-            process = subprocess.Popen(
-                [self.adb_path, "-s", self.device_id, "logcat", "-v", "time"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1
-            )
+            process = subprocess.Popen([self.adb_path, "-s", self.device_id, "logcat", "-v", "time"],
+                                     stdout=subprocess.PIPE, text=True, bufsize=1)
             
-            # Write header
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write("ANDROID DEVICE LOGS - UNIVERSAL CAPTURE\n")
-                f.write("=" * 60 + "\n")
-                f.write(f"Model: {self.device_info.get('model', 'Unknown')}\n")
-                f.write(f"Android: {self.device_info.get('android_version', 'Unknown')}\n")
-                f.write(f"Manufacturer: {self.device_info.get('manufacturer', 'Unknown')}\n")
-                f.write(f"Brand: {self.device_info.get('brand', 'Unknown')}\n")
-                f.write(f"Device ID: {self.device_id}\n")
-                f.write(f"Capture started: {datetime.now()}\n")
-                f.write(f"Duration: {duration} seconds\n")
-                f.write("=" * 60 + "\n\n")
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(f"APP LOGS: {app_label}\n")
+                f.write(f"Package: {package_name}\n")
+                f.write(f"Device: {model}\n")
+                f.write(f"Time: {datetime.now()}\n")
+                f.write("=" * 40 + "\n\n")
             
-            # Capture logs
             start_time = time.time()
             line_count = 0
             
-            with open(output_file, 'a', encoding='utf-8') as f:
+            with open(filename, 'a', encoding='utf-8') as f:
+                while (time.time() - start_time) < duration:
+                    line = process.stdout.readline()
+                    if line and package_name in line:
+                        f.write(line)
+                        line_count += 1
+                        if line_count % 10 == 0:
+                            elapsed = time.time() - start_time
+                            remaining = duration - elapsed
+                            print(f"   📊 {line_count} app lines | {remaining:.1f}s remaining")
+            
+            process.terminate()
+            print(f"\n✅ App Capture Complete!")
+            print(f"   📄 {line_count} lines → {filename}")
+            
+        except Exception as e:
+            print(f"❌ Error: {e}")
+    
+    def capture_device_logs(self, duration=60):
+        """Capture general device logs"""
+        if not self.device_id:
+            if not self.select_device():
+                return
+        
+        device_info = self.get_device_info()
+        model = device_info.get('model', 'AndroidDevice')
+        
+        # Ask for filename
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = "".join(c for c in model if c.isalnum() or c in ('-', '_', ' '))
+        default_filename = f"device_logs_{safe_name}_{timestamp}.txt"
+        
+        filename = input(f"Output filename [{default_filename}]: ").strip()
+        if not filename:
+            filename = default_filename
+        
+        print(f"\n🎯 Starting Device Log Capture")
+        print(f"   Device: {model}")
+        print(f"   Duration: {duration} seconds")
+        print(f"   Output: {filename}")
+        print("-" * 50)
+        
+        try:
+            subprocess.run([self.adb_path, "-s", self.device_id, "logcat", "-c"])
+            print("✅ Log buffer cleared")
+            
+            process = subprocess.Popen([self.adb_path, "-s", self.device_id, "logcat", "-v", "time"],
+                                     stdout=subprocess.PIPE, text=True, bufsize=1)
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(f"DEVICE LOGS: {model}\n")
+                f.write(f"Time: {datetime.now()}\n")
+                f.write("=" * 40 + "\n\n")
+            
+            start_time = time.time()
+            line_count = 0
+            
+            with open(filename, 'a', encoding='utf-8') as f:
                 while (time.time() - start_time) < duration:
                     line = process.stdout.readline()
                     if line:
@@ -182,247 +250,170 @@ class UniversalLogCapture:
                         if line_count % 25 == 0:
                             elapsed = time.time() - start_time
                             remaining = duration - elapsed
-                            print(f"   📊 {line_count} lines | {remaining:.1f}s remaining")
+                            print(f"   📊 {line_count} device lines | {remaining:.1f}s remaining")
             
             process.terminate()
-            
-            print(f"\n✅ Basic Capture Complete!")
-            print(f"   📄 {line_count} lines saved to: {output_file}")
-            return output_file
+            print(f"\n✅ Device Capture Complete!")
+            print(f"   📄 {line_count} lines → {filename}")
             
         except Exception as e:
             print(f"❌ Error: {e}")
-            return None
     
-    def capture_logs_advanced(self, duration=60, log_level="V", include_filters=None, exclude_filters=None):
-        """Advanced log capture with filtering for any device"""
-        if not self.device_id:
-            if not self.select_device():
-                return None
-        
-        model = self.device_info.get('model', 'AndroidDevice')
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_name = "".join(c for c in model if c.isalnum() or c in ('-', '_', ' '))
-        output_file = f"advanced_logs_{safe_name}_{timestamp}.txt"
-        
-        print(f"\n🎯 Starting Advanced Log Capture")
-        print(f"   Device: {model}")
-        print(f"   Duration: {duration} seconds")
-        print(f"   Log Level: {log_level}")
-        print(f"   Output: {output_file}")
-        if include_filters:
-            print(f"   Include: {', '.join(include_filters)}")
-        if exclude_filters:
-            print(f"   Exclude: {', '.join(exclude_filters)}")
-        print("-" * 50)
-        
-        try:
-            # Clear logs
-            subprocess.run([self.adb_path, "-s", self.device_id, "logcat", "-c"])
-            
-            # Start capture with log level
-            process = subprocess.Popen(
-                [self.adb_path, "-s", self.device_id, "logcat", "-v", "time", f"*:{log_level}"],
-                stdout=subprocess.PIPE,
-                text=True,
-                bufsize=1
-            )
-            
-            # Write header
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write("ADVANCED ANDROID DEVICE LOGS\n")
-                f.write("=" * 60 + "\n")
-                f.write(f"Device: {model}\n")
-                f.write(f"Manufacturer: {self.device_info.get('manufacturer', 'Unknown')}\n")
-                f.write(f"Android: {self.device_info.get('android_version', 'Unknown')}\n")
-                f.write(f"Log Level: {log_level}\n")
-                if include_filters:
-                    f.write(f"Include Filters: {', '.join(include_filters)}\n")
-                if exclude_filters:
-                    f.write(f"Exclude Filters: {', '.join(exclude_filters)}\n")
-                f.write(f"Capture started: {datetime.now()}\n")
-                f.write("=" * 60 + "\n\n")
-            
-            # Capture with filtering
-            start_time = time.time()
-            line_count = 0
-            
-            with open(output_file, 'a', encoding='utf-8') as f:
-                while (time.time() - start_time) < duration:
-                    line = process.stdout.readline()
-                    if line:
-                        # Apply filters
-                        should_write = True
-                        
-                        if include_filters and not any(filter_text in line for filter_text in include_filters):
-                            should_write = False
-                        
-                        if exclude_filters and any(filter_text in line for filter_text in exclude_filters):
-                            should_write = False
-                        
-                        if should_write:
-                            f.write(line)
-                            line_count += 1
-                            if line_count % 20 == 0:
-                                elapsed = time.time() - start_time
-                                print(f"   📊 {line_count} filtered lines | {elapsed:.1f}s elapsed")
-            
-            process.terminate()
-            
-            print(f"\n✅ Advanced Capture Complete!")
-            print(f"   📄 {line_count} filtered lines saved to: {output_file}")
-            return output_file
-            
-        except Exception as e:
-            print(f"❌ Error: {e}")
-            return None
-    
-    def real_time_monitor(self, duration=0):
-        """Real-time log monitoring for any device"""
+    def real_time_monitor(self):
+        """Real-time log monitor"""
         if not self.device_id:
             if not self.select_device():
                 return
         
-        model = self.device_info.get('model', 'AndroidDevice')
+        device_info = self.get_device_info()
+        model = device_info.get('model', 'AndroidDevice')
         
-        print(f"\n👀 Real-time Log Monitor - {model}")
-        print("   Press Ctrl+C to stop anytime")
+        print(f"\n👀 Real-time Monitor - {model}")
+        print("Press Ctrl+C to stop")
         print("-" * 50)
         
         try:
-            # Clear and start monitoring
             subprocess.run([self.adb_path, "-s", self.device_id, "logcat", "-c"])
-            
-            process = subprocess.Popen(
-                [self.adb_path, "-s", self.device_id, "logcat", "-v", "time"],
-                stdout=subprocess.PIPE,
-                text=True,
-                bufsize=1
-            )
+            process = subprocess.Popen([self.adb_path, "-s", self.device_id, "logcat", "-v", "time"],
+                                     stdout=subprocess.PIPE, text=True, bufsize=1)
             
             line_count = 0
-            start_time = time.time()
-            
             while True:
                 line = process.stdout.readline()
                 if line:
                     line_count += 1
                     print(f"[{line_count}] {line.strip()}")
-                
-                # Stop if duration specified and time elapsed
-                if duration > 0 and (time.time() - start_time) >= duration:
-                    break
-            
-            process.terminate()
-            print(f"\n⏹️  Monitoring stopped after {line_count} lines")
-            
+        
         except KeyboardInterrupt:
-            print(f"\n⏹️  Monitoring stopped by user after {line_count} lines")
+            print(f"\n⏹️  Monitoring stopped - {line_count} lines")
             if process:
                 process.terminate()
         except Exception as e:
             print(f"❌ Monitor error: {e}")
-    
-    def quick_capture_presets(self):
-        """Quick capture with preset configurations"""
-        presets = {
-            "1": {"name": "Quick 30s", "duration": 30, "level": "V"},
-            "2": {"name": "Errors Only", "duration": 120, "level": "E"},
-            "3": {"name": "Warnings+", "duration": 180, "level": "W"},
-            "4": {"name": "Security Focus", "duration": 300, "level": "V", "include": ["Security", "Permission", "Auth"]},
-            "5": {"name": "Clean Logs", "duration": 240, "level": "V", "exclude": ["dalvikvm", "SystemServer"]}
-        }
-        
-        print("\n🚀 Quick Capture Presets:")
-        for key, preset in presets.items():
-            print(f"   {key}. {preset['name']} - {preset['duration']}s - Level: {preset['level']}")
-        
-        choice = input("\nChoose preset (1-5): ").strip()
-        
-        if choice in presets:
-            preset = presets[choice]
-            if "include" in preset or "exclude" in preset:
-                self.capture_logs_advanced(
-                    duration=preset["duration"],
-                    log_level=preset["level"],
-                    include_filters=preset.get("include"),
-                    exclude_filters=preset.get("exclude")
-                )
-            else:
-                self.capture_logs_basic(
-                    duration=preset["duration"],
-                    output_file=f"preset_{preset['name'].replace(' ', '_').lower()}_{datetime.now().strftime('%H%M%S')}.txt"
-                )
 
 def main():
-    capture = UniversalLogCapture()
+    capture = LogCapture()
     
     print("=" * 70)
-    print("       UNIVERSAL ANDROID LOG CAPTURE - ALL DEVICES")
-    print("=" * 70)
-    print("Works with: Samsung, Google Pixel, OnePlus, Xiaomi, ZTE,")
-    print("Huawei, Sony, Motorola, LG, and ANY Android device!")
+    print("           UNIVERSAL ANDROID LOG CAPTURE")
     print("=" * 70)
     
     while True:
-        # Show current device status
         devices = capture.get_all_devices()
         print(f"\n📱 Connected devices: {len(devices)}")
         for device in devices:
-            info = capture.get_device_info(device)
+            info = capture.get_device_info()
             print(f"   • {info.get('model', 'Unknown')} ({device})")
         
         print("\n" + "=" * 50)
-        print("MAIN MENU - UNIVERSAL")
+        print("MAIN MENU - SIMPLE CHOICE")
         print("=" * 50)
-        print("1. Basic Log Capture (Select Device)")
-        print("2. Advanced Log Capture (With Filtering)")
-        print("3. Real-time Log Monitor")
-        print("4. Quick Capture Presets")
-        print("5. Exit")
+        print("1. 📱 Capture SPECIFIC APP logs")
+        print("2. 🔧 Capture GENERAL DEVICE logs")
+        print("3. 🔍 Browse/Search Apps")
+        print("4. 👀 Real-time Monitor")
+        print("5. 🚪 Exit")
         
-        choice = input("\nChoose option (1-5): ").strip()
+        choice = input("\nEnter your choice (1-5): ").strip()
         
         if choice == "1":
-            try:
-                duration = int(input("Duration in seconds [60]: ") or "60")
-                filename = input("Output filename [auto]: ") or None
-                capture.capture_logs_basic(duration, filename)
-            except ValueError:
-                print("❌ Invalid duration")
+            print("\n🎯 You selected: CAPTURE SPECIFIC APP LOGS")
+            print("\n🔍 How do you want to select an app?")
+            print("1. Enter package name manually")
+            print("2. Browse installed apps")
+            print("3. Search for apps")
+            print("4. Go back to main menu")
+            
+            method = input("\nChoose method (1-4): ").strip()
+            
+            if method == "1":
+                package = input("Enter app package name: ").strip()
+                if package:
+                    try:
+                        duration = int(input("Duration in seconds [60]: ") or "60")
+                        capture.capture_app_logs(package, duration)
+                    except ValueError:
+                        print("❌ Invalid duration")
+                else:
+                    print("❌ No package name provided")
+            
+            elif method == "2":
+                apps = capture.get_installed_apps(30)
+                if apps:
+                    print(f"\n📦 Installed Apps (showing {len(apps)}):")
+                    for i, (package, label) in enumerate(apps, 1):
+                        print(f"   {i}. {label}")
+                    
+                    try:
+                        app_choice = int(input(f"\nSelect app (1-{len(apps)}): "))
+                        if 1 <= app_choice <= len(apps):
+                            package, _ = apps[app_choice-1]
+                            duration = int(input("Duration in seconds [60]: ") or "60")
+                            capture.capture_app_logs(package, duration)
+                        else:
+                            print("❌ Invalid selection")
+                    except ValueError:
+                        print("❌ Invalid input")
+                else:
+                    print("❌ No apps found")
+            
+            elif method == "3":
+                search = input("Enter app name or package to search for: ").strip()
+                if search:
+                    matching_apps = capture.search_apps(search)
+                    if matching_apps:
+                        print(f"\n🔍 Found {len(matching_apps)} matching apps:")
+                        for i, (package, label) in enumerate(matching_apps, 1):
+                            print(f"   {i}. {label}")
+                        
+                        try:
+                            app_choice = int(input(f"\nSelect app (1-{len(matching_apps)}): "))
+                            if 1 <= app_choice <= len(matching_apps):
+                                package, _ = matching_apps[app_choice-1]
+                                duration = int(input("Duration in seconds [60]: ") or "60")
+                                capture.capture_app_logs(package, duration)
+                            else:
+                                print("❌ Invalid selection")
+                        except ValueError:
+                            print("❌ Invalid input")
+                    else:
+                        print("❌ No apps found matching your search")
+                else:
+                    print("❌ No search term provided")
+            
+            elif method == "4":
+                continue
+            else:
+                print("❌ Invalid choice")
         
         elif choice == "2":
+            print("\n🔧 You selected: CAPTURE GENERAL DEVICE LOGS")
             try:
-                duration = int(input("Duration [60]: ") or "60")
-                level = input("Log level (V/D/I/W/E) [V]: ") or "V"
-                
-                include = input("Include keywords (comma-separated, optional): ").strip()
-                include_filters = [f.strip() for f in include.split(',')] if include else None
-                
-                exclude = input("Exclude keywords (comma-separated, optional): ").strip()
-                exclude_filters = [f.strip() for f in exclude.split(',')] if exclude else None
-                
-                capture.capture_logs_advanced(duration, level, include_filters, exclude_filters)
-            except ValueError:
-                print("❌ Invalid input")
-        
-        elif choice == "3":
-            try:
-                duration = input("Monitor duration in seconds (0 for unlimited) [0]: ").strip()
-                duration = int(duration) if duration else 0
-                capture.real_time_monitor(duration)
+                duration = int(input("Duration in seconds [60]: ") or "60")
+                capture.capture_device_logs(duration)
             except ValueError:
                 print("❌ Invalid duration")
         
+        elif choice == "3":
+            print("\n🔍 Browse/Search Apps")
+            apps = capture.get_installed_apps(50)
+            if apps:
+                print(f"\n📦 All Installed Apps ({len(apps)}):")
+                for i, (package, label) in enumerate(apps, 1):
+                    print(f"   {i:2d}. {label}")
+            else:
+                print("❌ No apps found")
+        
         elif choice == "4":
-            capture.quick_capture_presets()
+            print("\n👀 Real-time Monitor")
+            capture.real_time_monitor()
         
         elif choice == "5":
-            print("👋 Thank you for using Universal Android Log Capture!")
+            print("\n👋 Thank you for using Android Log Capture!")
             break
         
         else:
-            print("❌ Invalid choice")
+            print("❌ Invalid choice. Please enter 1-5.")
         
         input("\nPress Enter to continue...")
 
