@@ -16,10 +16,10 @@ class LogCapture:
         
         # Verify ADB exists
         if not os.path.exists(self.adb_path):
-            print(f"❌ ADB not found at: {self.adb_path}")
+            print(f"ADB not found at: {self.adb_path}")
             exit()
         else:
-            print(f"✅ ADB found: {self.adb_path}")
+            print(f"ADB found: {self.adb_path}")
     
     def get_all_devices(self):
         """Get all connected Android devices"""
@@ -37,7 +37,7 @@ class LogCapture:
         """Let user select which device to use"""
         devices = self.get_all_devices()
         if not devices:
-            print("❌ No Android devices connected!")
+            print("No Android devices connected!")
             return False
         
         if len(devices) == 1:
