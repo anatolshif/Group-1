@@ -93,7 +93,7 @@ class LogCapture:
             
             # Get app labels
             apps_with_labels = []
-            print("📦 Getting app information...")
+            print("Getting app information...")
             
             for i, package in enumerate(packages[:count]):
                 label_result = subprocess.run([self.adb_path, "-s", self.device_id, "shell", "pm", "dump", package],
@@ -109,7 +109,7 @@ class LogCapture:
                                 break
                 
                 apps_with_labels.append((package, app_label))
-                print(f"   🔍 {i+1}/{min(len(packages), count)}", end='\r')
+                print(f"    {i+1}/{min(len(packages), count)}", end='\r')
             
             print(f"\n✅ Found {len(packages)} apps")
             return apps_with_labels
@@ -159,7 +159,7 @@ class LogCapture:
         if not filename:
             filename = default_filename
         
-        print(f"\n🎯 Starting App Log Capture")
+        print(f"\n Starting App Log Capture")
         print(f"   App: {app_label}")
         print(f"   Package: {package_name}")
         print(f"   Device: {model}")
@@ -169,7 +169,7 @@ class LogCapture:
         
         try:
             subprocess.run([self.adb_path, "-s", self.device_id, "logcat", "-c"])
-            print("✅ Log buffer cleared")
+            print(" Log buffer cleared")
             
             process = subprocess.Popen([self.adb_path, "-s", self.device_id, "logcat", "-v", "time"],
                                      stdout=subprocess.PIPE, text=True, bufsize=1)
@@ -193,14 +193,14 @@ class LogCapture:
                         if line_count % 10 == 0:
                             elapsed = time.time() - start_time
                             remaining = duration - elapsed
-                            print(f"   📊 {line_count} app lines | {remaining:.1f}s remaining")
+                            print(f"    {line_count} app lines | {remaining:.1f}s remaining")
             
             process.terminate()
-            print(f"\n✅ App Capture Complete!")
-            print(f"   📄 {line_count} lines → {filename}")
+            print(f"\n App Capture Complete!")
+            print(f"    {line_count} lines → {filename}")
             
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f" Error: {e}")
     
     def capture_device_logs(self, duration=60):
         """Capture general device logs"""
@@ -220,7 +220,7 @@ class LogCapture:
         if not filename:
             filename = default_filename
         
-        print(f"\n🎯 Starting Device Log Capture")
+        print(f"\n Starting Device Log Capture")
         print(f"   Device: {model}")
         print(f"   Duration: {duration} seconds")
         print(f"   Output: {filename}")
@@ -228,7 +228,7 @@ class LogCapture:
         
         try:
             subprocess.run([self.adb_path, "-s", self.device_id, "logcat", "-c"])
-            print("✅ Log buffer cleared")
+            print(" Log buffer cleared")
             
             process = subprocess.Popen([self.adb_path, "-s", self.device_id, "logcat", "-v", "time"],
                                      stdout=subprocess.PIPE, text=True, bufsize=1)
@@ -250,14 +250,14 @@ class LogCapture:
                         if line_count % 25 == 0:
                             elapsed = time.time() - start_time
                             remaining = duration - elapsed
-                            print(f"   📊 {line_count} device lines | {remaining:.1f}s remaining")
+                            print(f" {line_count} device lines | {remaining:.1f}s remaining")
             
             process.terminate()
-            print(f"\n✅ Device Capture Complete!")
-            print(f"   📄 {line_count} lines → {filename}")
+            print(f"\n Device Capture Complete!")
+            print(f"    {line_count} lines → {filename}")
             
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f" Error: {e}")
     
     def real_time_monitor(self):
         """Real-time log monitor"""
@@ -268,7 +268,7 @@ class LogCapture:
         device_info = self.get_device_info()
         model = device_info.get('model', 'AndroidDevice')
         
-        print(f"\n👀 Real-time Monitor - {model}")
+        print(f"\n Real-time Monitor - {model}")
         print("Press Ctrl+C to stop")
         print("-" * 50)
         
@@ -289,7 +289,7 @@ class LogCapture:
             if process:
                 process.terminate()
         except Exception as e:
-            print(f"❌ Monitor error: {e}")
+            print(f" Monitor error: {e}")
 
 def main():
     capture = LogCapture()
@@ -300,7 +300,7 @@ def main():
     
     while True:
         devices = capture.get_all_devices()
-        print(f"\n📱 Connected devices: {len(devices)}")
+        print(f"\n Connected devices: {len(devices)}")
         for device in devices:
             info = capture.get_device_info()
             print(f"   • {info.get('model', 'Unknown')} ({device})")
@@ -308,11 +308,11 @@ def main():
         print("\n" + "=" * 50)
         print("MAIN MENU - SIMPLE CHOICE")
         print("=" * 50)
-        print("1. 📱 Capture SPECIFIC APP logs")
-        print("2. 🔧 Capture GENERAL DEVICE logs")
-        print("3. 🔍 Browse/Search Apps")
-        print("4. 👀 Real-time Monitor")
-        print("5. 🚪 Exit")
+        print("1.  Capture SPECIFIC APP logs")
+        print("2.  Capture GENERAL DEVICE logs")
+        print("3.  Browse/Search Apps")
+        print("4.  Real-time Monitor")
+        print("5.  Exit")
         
         choice = input("\nEnter your choice (1-5): ").strip()
         
@@ -333,9 +333,9 @@ def main():
                         duration = int(input("Duration in seconds [60]: ") or "60")
                         capture.capture_app_logs(package, duration)
                     except ValueError:
-                        print("❌ Invalid duration")
+                        print(" Invalid duration")
                 else:
-                    print("❌ No package name provided")
+                    print(" No package name provided")
             
             elif method == "2":
                 apps = capture.get_installed_apps(30)
@@ -351,11 +351,11 @@ def main():
                             duration = int(input("Duration in seconds [60]: ") or "60")
                             capture.capture_app_logs(package, duration)
                         else:
-                            print("❌ Invalid selection")
+                            print(" Invalid selection")
                     except ValueError:
-                        print("❌ Invalid input")
+                        print("Invalid input")
                 else:
-                    print("❌ No apps found")
+                    print("No apps found")
             
             elif method == "3":
                 search = input("Enter app name or package to search for: ").strip()
@@ -373,26 +373,26 @@ def main():
                                 duration = int(input("Duration in seconds [60]: ") or "60")
                                 capture.capture_app_logs(package, duration)
                             else:
-                                print("❌ Invalid selection")
+                                print(" Invalid selection")
                         except ValueError:
-                            print("❌ Invalid input")
+                            print(" Invalid input")
                     else:
-                        print("❌ No apps found matching your search")
+                        print(" No apps found matching your search")
                 else:
-                    print("❌ No search term provided")
+                    print(" No search term provided")
             
             elif method == "4":
                 continue
             else:
-                print("❌ Invalid choice")
+                print(" Invalid choice")
         
         elif choice == "2":
-            print("\n🔧 You selected: CAPTURE GENERAL DEVICE LOGS")
+            print("\n You selected: CAPTURE GENERAL DEVICE LOGS")
             try:
                 duration = int(input("Duration in seconds [60]: ") or "60")
                 capture.capture_device_logs(duration)
             except ValueError:
-                print("❌ Invalid duration")
+                print("Invalid duration")
         
         elif choice == "3":
             print("\n🔍 Browse/Search Apps")
@@ -402,18 +402,18 @@ def main():
                 for i, (package, label) in enumerate(apps, 1):
                     print(f"   {i:2d}. {label}")
             else:
-                print("❌ No apps found")
+                print(" No apps found")
         
         elif choice == "4":
-            print("\n👀 Real-time Monitor")
+            print("\n Real-time Monitor")
             capture.real_time_monitor()
         
         elif choice == "5":
-            print("\n👋 Thank you for using Android Log Capture!")
+            print("\n Thank you for using Android Log Capture!")
             break
         
         else:
-            print("❌ Invalid choice. Please enter 1-5.")
+            print(" Invalid choice. Please enter 1-5.")
         
         input("\nPress Enter to continue...")
 
