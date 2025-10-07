@@ -3,6 +3,7 @@
 argparse
 importlib-metadata
 json5
+jadx-1.5.3.zip
 
 # Frida for dynamic instrumentation
 frida
