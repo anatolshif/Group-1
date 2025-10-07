@@ -3,7 +3,6 @@
 argparse
 importlib-metadata
 json5
-Jadx
 frida
 ADB
 apktool
