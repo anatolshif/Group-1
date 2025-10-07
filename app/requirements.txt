@@ -3,7 +3,6 @@
 argparse
 importlib-metadata
 json5
-jadx-1.5.3.zip
 Jadx
 frida
 ADB
