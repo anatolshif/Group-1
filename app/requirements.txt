@@ -1,0 +1,19 @@
+# requirements.txt
+# Core libraries (mostly standard, listed for clarity)
+argparse
+importlib-metadata
+json5
+Jadx
+frida
+ADB
+apktool
+
+# Frida for dynamic instrumentation
+frida
+frida-tools
+
+# PDF generation (if using report generation module)
+reportlab
+
+# Optional/Utility packages (used in some scripts)
+pyyaml

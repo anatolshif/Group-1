@@ -21,7 +21,7 @@ def find_exported_true(manifest_path):
 
         return exported_components
     except Exception as e:
-        print(f"❌ Error reading {manifest_path}: {e}")
+        print(f" Error reading {manifest_path}: {e}")
         return []
 
 if __name__ == "__main__":
@@ -31,14 +31,14 @@ if __name__ == "__main__":
 
     manifest_file = Path(sys.argv[1])
     if not manifest_file.exists():
-        print(f"❌ File not found: {manifest_file}")
+        print(f" File not found: {manifest_file}")
         sys.exit(1)
 
     results = find_exported_true(manifest_file)
 
     if results:
-        print(f"\n⚡ Found {len(results)} exported components in {manifest_file}:\n")
+        print(f"\n Found {len(results)} exported components in {manifest_file}:\n")
         for item in results:
             print(f"- <{item['tag']}>  name: {item['name']}")
     else:
-        print(f"\n✅ No components with android:exported=\"true\" found in {manifest_file}")
+        print(f"\n No components with android:exported=\"true\" found in {manifest_file}")
