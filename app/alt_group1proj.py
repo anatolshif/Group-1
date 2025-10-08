@@ -1,7 +1,7 @@
 import subprocess
 import re
 import xml.etree.ElementTree as ET
-
+import find_exported
 
 ADB = r"/Users/useer/AppData/Local/Android/Sdk/platform-tools/adb.exe"
 JADX = "C:/Users/useer/Downloads/Security/jadx-1.5.1/bin/jadx.bat"
@@ -75,14 +75,14 @@ def StaticAnalysis():
         subprocess.run([JADX, "-d", f"decompiled/{package_name}", f"apks/{package_name}.apk"])
         print("finally here")
         manifest_path = f"C:/Users/useer/Documents/Group1Project/Group-1/app/decompiled/{package_name}/resources/AndroidManifest.xml"
-        results = find_exported_true(manifest_path)
-
-        if results:
-            print(f"\n Found {len(results)} exported components in {package_name}:\n")
-            for item in results:
-                print(f"- <{item['tag']}>  name: {item['name']}")
-        else:
-            print(f"\n No components with android:exported=\"true\" found in {package_name}")
+        results = find_exported.find_exported_true(manifest_path)
+        find_exported.print_results(results, manifest_path)
+        # if results:
+        #     print(f"\n Found {len(results)} exported components in {package_name}:\n")
+        #     for item in results:
+        #         print(f"- <{item['tag']}>  name: {item['name']}")
+        # else:
+        #     print(f"\n No components with android:exported=\"true\" found in {package_name}")
 
 
 

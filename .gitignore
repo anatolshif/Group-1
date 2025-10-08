@@ -1,0 +1,12 @@
+app/__pycache__/find_exported.cpython-313.pyc
+*.pyc
+__pycache__/
+
+# Log files created by tools like logcat or tcpdump
+*.log
+*.pcap
+*.cap
+
+# Decompiled output
+decompiled/
+apks/
