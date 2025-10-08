@@ -67,7 +67,7 @@ def find_exported_true(manifest_path):
                 elif "." not in name:
                     name = package_name + "." + name
                 
-                exported_components.append({
+                results["exported_components"].append({
                     "tag": elem.tag,
                     "name": name,
                     "permission": elem.attrib.get(f"{{{android_ns}}}permission", "None")

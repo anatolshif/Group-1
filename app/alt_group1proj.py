@@ -30,7 +30,33 @@ def fridaHook():
     
 
 def NetAnalysis():
-    subprocess.Popen([])
+    lin2 = '''
+    For network Analysis you can perform packet capture or setup MITM
+    
+    option 1)
+    For packet capture, run this command as root in adb:
+    emulator -tcpdump packets.cap -avd <device name>
+
+    option 2)
+    For MITM using Burpsuite, you need to install portswiggers cert as system cert since most apps only trust system certificates.
+    this can be done by running the scripts provided in the scripts folder.
+    '''
+    print(lin2)
+    result = subprocess.run([ADB, "shell", "getprop", "ro.build.version.release"], capture_output=True,text=True, check=True)
+    android_version = int(result.stdout.strip())
+    if (android_version>13):
+        subprocess.run([ADB, "push", "/Users/useer/Documents/Group1Project/Group-1/app/scripts/Android14&above.sh", "/data/local/tmp/portswiggercertassystemcert.sh"])
+    elif(android_version<=13):
+        subprocess.run([ADB, "push", "/Users/useer/Documents/Group1Project/Group-1/app/scripts/belowAndroid14.sh", "/data/local/tmp/portswiggercertassystemcert.sh"])
+    
+    Lin3 = '''
+    The neccessary script has been pushed into /data/local/tmp
+    Now all you have to do is install portswigger certificate as user certificate and run the script.
+    It will move it into System Certificates allowing you to Intercept network traffic.
+    '''
+    print(Lin3)
+    
+    #subprocess.Popen([ADB, "push", "/scripts/belowAndroid14.sh", "/data/local/tmp/belowAndroid14.sh"])
 
 def StaticAnalysis():
     choice = input('input apk name and make sure it is found in folder called apks or input 1 to fetch(s) 3rd party apps from a connected device:')
@@ -88,22 +114,41 @@ def logAnalysis():
 
 
 if __name__ == "__main__":
-    lin1 = "____________________Android App Security Scanner______________________\n"
-    lin2 = "options:\n"
-    lin3 = "1. Dynamic Instrumentation\n"
-    lin4 = "2. Static Analysis\n"
-    lin5 = "3. Network Interception\n"
-    lin6 = "4. Log Capture\n"
-    lin7 = "\n\n\nTo exit, press any other key."
-    concat = lin1+lin2+lin3+lin4+lin5+lin6+lin7
-    print(concat)
+    
+    lin1 = r'''               
+                       _            _     _ 
+        /\            | |          (_)   | |     /\                                            
+       /  \  ____   _ | | ____ ___  _  _ | |    /  \  ____  ____                               
+      / /\ \|  _ \ / || |/ ___) _ \| |/ || |   / /\ \|  _ \|  _ \                              
+     | |__| | | | ( (_| | |  | |_| | ( (_| |  | |__| | | | | | | |                             
+     |______|_| |_|\____|_|   \___/|_|\____|  |______| ||_/| ||_/                              
+                                                     |_|   |_|                                 
+        _                           _                 _                                       
+       | |                         (_)_              | |                                      
+        \ \   ____ ____ _   _  ____ _| |_ _   _       \ \   ____ ____ ____  ____   ____  ____ 
+         \ \ / _  ) ___) | | |/ ___) |  _) | | |       \ \ / ___) _  |  _ \|  _ \ / _  )/ ___)
+     _____) | (/ ( (___| |_| | |   | | |_| |_| |   _____) | (__( ( | | | | | | | ( (/ /| |    
+    (______/ \____)____)\____|_|   |_|\___)__  |  (______/ \____)_||_|_| |_|_| |_|\____)_|    
+                                         (____/                                               
+    '''
+    lin2 = '''
+    options:\n
+    1. Dynamic Instrumentation\n
+    2. Static Analysis\n
+    3. Network Interception\n
+    4. Log Capture\n
+    \n\n\nTo exit, press any other key.'''
+    
+    print(lin1+lin2)
     choice = input("Enter choice:")
     if (choice =='1'):
-        print("here")
+        #print("here")
         fridaHook()
-        print("frida called")
+        #print("frida called")
     if (choice == '2'):
         StaticAnalysis()
+    if (choice == '3'):
+        NetAnalysis()
 
     elif (choice != 1):
         print("Thanks for using this tool.")
