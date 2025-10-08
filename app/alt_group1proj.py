@@ -2,6 +2,8 @@ import subprocess
 import re
 import xml.etree.ElementTree as ET
 import find_exported
+import generate_scan_report
+from pathlib import Path
 
 ADB = r"/Users/useer/AppData/Local/Android/Sdk/platform-tools/adb.exe"
 JADX = "C:/Users/useer/Downloads/Security/jadx-1.5.1/bin/jadx.bat"
@@ -24,9 +26,19 @@ def fetchMultipleApps():
 
 
 def fridaHook():
-    # load script.js into frida
-    output = subprocess.run(["frida", "-U", "-l", "script.js", "-F"])
-    #print(output)
+    lin4 = ''''
+    Choose (1) to be able to perform different kinds of bypasses(root detection, ssl pinning) and to hook functions.
+
+    Choose(2) to be able to trace function calls
+    '''
+    choice = input("Enter choice:")
+    if (choice =='1'):
+        # load script.js into frida
+        output = subprocess.run(["frida", "-U", "-l", "script.js", "-F"])
+        #print(output)
+    if (choice == '2'):
+        funcname = input('input "<classname>!<function>" you want to hook')
+        output = subprocess.run(["frida-trace", "-U", "-j", funcname, "-F"])
     
 
 def NetAnalysis():
@@ -108,8 +120,25 @@ def find_exported_true(manifest_path):
         print(f" Error reading {manifest_path}: {e}")
         return []
 
-def logAnalysis():
-    pass
+def logCapture():
+    package_name= input("enter the package name of the application you want to capture the logs of:")
+    result = subprocess.run([ADB, "shell", "pidof", package_name], capture_output=True,text=True, check=True)
+    pid = result.stdout.strip()
+    if (pid):
+        print("strated capturing logs.")
+        subprocess.run([ADB, "logcat", f"--pid={pid}", ">", f"logs/{package_name}.log"], shell=True)
+        
+def generateReport():
+    print('\n \n', 'To Generate Report You need to fill in your findings into "template.json"', '\n')
+    answer = input('Have you filled out the template? (Y/N)')
+    if (answer == "Y"):
+        app_name = input('Enter app name:')
+        generate_scan_report.build_pdf(Path("scan_results.json"), f"{app_name}.pdf")
+        print(f"The report has been generated with the name {app_name}.pdf")
+    elif(answer == "N"):
+        print("\n", "Please fill out the form.", "\n")
+
+
 
 
 
@@ -137,6 +166,7 @@ if __name__ == "__main__":
     2. Static Analysis\n
     3. Network Interception\n
     4. Log Capture\n
+    5. Generate report\n
     \n\n\nTo exit, press any other key.'''
     
     print(lin1+lin2)
@@ -149,6 +179,9 @@ if __name__ == "__main__":
         StaticAnalysis()
     if (choice == '3'):
         NetAnalysis()
-
+    if (choice == '4'):
+        logCapture()
+    if (choice == '5'):
+        generateReport()
     elif (choice != 1):
         print("Thanks for using this tool.")

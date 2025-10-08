@@ -1,0 +1,55 @@
+{
+  "app_name": "DemoBankingApp",
+  "package": "com.demo.banking",
+  "scan_date": "2025-09-01T12:00:00Z",
+  "scanner_version": "AndroidScanner v0.1",
+  "summary": {
+    "total_checks": 10,
+    "issues_found": 4,
+    "high": 2,
+    "medium": 1,
+    "low": 1
+  },
+  "vulnerabilities": [
+    {
+      "id": "M1",
+      "title": "Improper Platform Usage",
+      "severity": "High",
+      "score": 8.2,
+      "description": "The app uses insecure file permissions, allowing other apps to read sensitive data.",
+      "evidence": "World-readable file found in /sdcard/DemoBankingApp/user_data.txt",
+      "affected_components": ["com.demo.banking.storage.FileHandler"],
+      "recommendation": "Store sensitive data in internal storage with restricted permissions."
+    },
+    {
+      "id": "M2",
+      "title": "Insecure Data Storage",
+      "severity": "High",
+      "score": 7.9,
+      "description": "Plaintext credentials stored in SharedPreferences.",
+      "evidence": "Found key 'password' in /data/data/com.demo.banking/shared_prefs/user.xml",
+      "affected_components": ["SharedPreferences: user.xml"],
+      "recommendation": "Encrypt data using Android Keystore or EncryptedSharedPreferences."
+    },
+    {
+      "id": "M3",
+      "title": "Insecure Communication",
+      "severity": "Medium",
+      "score": 6.0,
+      "description": "The app sends login requests over HTTP instead of HTTPS.",
+      "evidence": "Observed traffic to http://api.demobank.com/login",
+      "affected_components": ["com.demo.banking.network.ApiService"],
+      "recommendation": "Use HTTPS with TLS and enable certificate pinning."
+    },
+    {
+      "id": "M4",
+      "title": "Insufficient Cryptography",
+      "severity": "Low",
+      "score": 3.5,
+      "description": "App uses MD5 for hashing sensitive values.",
+      "evidence": "Found MD5 in com.demo.banking.utils.HashUtil",
+      "affected_components": ["com.demo.banking.utils.HashUtil"],
+      "recommendation": "Use stronger algorithms like SHA-256 or HMAC with secret keys."
+    }
+  ]
+}
