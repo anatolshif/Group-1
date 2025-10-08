@@ -5,7 +5,6 @@ importlib-metadata
 json5
 frida
 ADB
-apktool
 
 # Frida for dynamic instrumentation
 frida
